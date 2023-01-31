@@ -15,5 +15,16 @@ const isValidName = (value) => /^([\w]{2,})+\s+([\w\s]{2,})+$/i.test(value);
 //Email validation
 const isValidEmail = (value) => /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(value);
 
+//phone validation
+const isValidNumber = function (number) {
+    if (!number || number.toString().trim().length == 0) return false;
+    if (isNaN(Number(number.toString().trim()))) return false
+    return true
+}
 
-module.exports = { isValidRequest, isValidValue, isValidName, isValidEmail };
+//image validation
+const validFormat = function (value) {
+    return /\.(gif|jpg|jpeg|tiff|png|webp|bmp)$/i.test(value)
+}
+
+module.exports = { isValidRequest, isValidValue, isValidName, isValidEmail, isValidNumber, validFormat };

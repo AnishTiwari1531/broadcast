@@ -2,29 +2,22 @@ const nodemailer = require("nodemailer");
 const mongoose = require("mongoose");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
+const aws_config = require("../awsS3/aws");
 const userModel = require("../models/userModel");
-const { isValidName, isValidEmail, isValidRequest, isValidValue } = require("../utils/validator");
+const { isValidName, isValidEmail, isValidRequest, isValidValue, isValidNumber, validFormat } = require("../utils/validator");
 const saltRounds = 10;
-
-//Gmail....https://myaccount.google.com/ >>> Security >>> App PAssword >>>Generate new pswd
-const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    host: 'smtp.gmail.com',
-    secure: true,
-    auth: {
-        user: 'anishtiwariatwork@gmail.com',
-        pass: 'cnjjengefnxlaetn'
-    }
-});
 
 //----------------------------------USER-Sign Up --------------------------------//
 
 const createUser = async (req, res) => {
     try {
-        const { name, email, password } = req.body;
+        let data = req.body
+        let files = req.files;
+
+        const { name, email, password, gender, phone } = data;
 
         //Request Validation
-        if (!isValidRequest(req.body)) {
+        if (!isValidRequest(data)) {
             return res.status(400).send({ Status: 'Failed', Message: "Please fill the details" });
         }
 
@@ -61,18 +54,64 @@ const createUser = async (req, res) => {
         }
 
         req.body.password = await bcrypt.hash(password, saltRounds);    //Password Hashing
-        let newUser = await userModel.create(req.body);
+
+        if (!isValidNumber(phone)) {
+            return res.status(400).send({ Status: 'Failed', Message: "Phone number is not valid" });
+        }
+
+        const checkPhone = await userModel.findOne({ phone });
+        if (checkPhone) {
+            return res.status(400).send({ Status: 'Failed', Message: "This number already exists" });
+        }
+
+        if (gender) {
+            if (!(["Male", "Female", "Others"].includes(gender))) {
+                return res.status(400).send({ Status: false, message: "Please provide valid gender" })
+            }
+        }
+
+        if (files.length > 0) {
+            if (!validFormat(files[0].originalname)) {
+                return res.status(400).send({ status: false, message: "Only image format is accept" });
+            }
+            data.profileImage = await aws_config.uploadFile(files[0]);
+        }
+
+        let newUser = await userModel.create(data);
 
         newUser = newUser.toObject();
         delete newUser.password;
+        delete newUser.role;
+        delete newUser.isDeleted;
 
-        transporter.sendMail({
+
+        //Gmail....https://myaccount.google.com/ >>> Security >>> App PAssword >>>Generate new pswd
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            host: 'smtp.gmail.com',
+            secure: true,
+            auth: {
+                user: 'anishtiwariatwork@gmail.com',
+                pass: 'cnjjengefnxlaetn'
+            }
+        });
+
+        const mailOptions = {
             from: '"ANISH TIWARI" <anishtiwariatwork@gmail.com>',
             to: newUser.email,
             subject: 'Registration Successful',
             text: `Dear ${newUser.name},
             Your registration was successful!
             Thank you for registering. Your account has been created.`,
+        };
+
+
+        transporter.sendMail(mailOptions, (err, data) => {
+            if (err) {
+                console.log(err);
+            } else {
+                console.log("Email sent!");
+            }
         });
 
         return res.status(201).send({ Status: 'Success', 'User Details': newUser });
@@ -100,7 +139,7 @@ const login = async (req, res) => {
             return res.status(400).send({ Status: 'Failed', Messgage: "Enter your Email" });
         }
 
-        const checkUser = await userModel.findOne({ email });
+        const checkUser = await userModel.findOne({ email: email });
         if (!checkUser) {
             return res.status(404).send({ Status: 'Failed', Message: "Email not found" });
         }
@@ -128,7 +167,7 @@ const login = async (req, res) => {
                 iat: createTime,
                 exp: expTime,
             },
-            "broaadcast"
+            "broaddcast"
         );
 
         res.setHeader("x-api-key", token);
@@ -139,32 +178,66 @@ const login = async (req, res) => {
     }
 };
 
+//----------------------------------GET-USER-Profile For Admin--------------------------------//
 
+
+const getUserDetails = async (req, res) => {
+    try {
+        let searchObject = {};
+        let { name, email, phone } = req.query;
+
+        if (name) {
+            searchObject["name"] = name;
+        }
+        if (email) {
+            searchObject["email"] = email;
+        }
+        if (phone) {
+            searchObject["phone"] = phone;
+        }
+
+        let data = await userModel.find(searchObject).select({ role: 0, profileImage: 0, password: 0, createdAt: 0, updatedAt: 0, _id: 0, isDeleted: 0 })
+
+        if (data.length !== 0) {
+            return res.status(200).send({ status: true, message: "Success", Data: data });
+        } else if (data.length === 0) {
+            return res.status(404).send({ status: false, message: "No Data found" });
+        }
+
+    } catch (err) {
+        res.status(500).send({ status: false, message: err.message })
+    }
+}
 
 
 //----------------------------------USER-Profile Update --------------------------------//
 
 const updateUser = async (req, res) => {
     try {
-        const { name, email, password } = req.body;
+        let data = req.body;
 
         //Request Validation
-        if (!isValidRequest(req.body)) {
+        if (!isValidRequest(data)) {
             return res.status(400).send({ Status: 'Failed', Message: "Nothing to update" });
         }
 
+        const { name, email, password, gender, phone } = data;
+
+        let updatedData = {};
+
         //Name Validation
-        if (Object.keys(req.body).includes('name')) {
+        if (Object.keys(data).includes('name')) {
             if (!isValidValue(name)) {
                 return res.status(400).send({ Status: 'Failed', Message: "Please enter your Name" });
             }
             if (!isValidName(name)) {
                 return res.status(400).send({ Status: 'Failed', Message: "Enter your name properly" });
             }
+            updatedData.name = name;
         }
 
         //Email Validation
-        if (Object.keys(req.body).includes('email')) {
+        if (Object.keys(data).includes('email')) {
             if (!isValidValue(email)) {
                 return res.status(400).send({ Status: 'Failed', Message: "Please enter your email" });
             }
@@ -175,10 +248,11 @@ const updateUser = async (req, res) => {
             if (emailExist) {
                 return res.status(400).send({ Status: 'Failed', Message: "This email already exists" });
             }
+            updatedData.email = email;
         }
 
         //Password Validation
-        if (Object.keys(req.body).includes('password')) {
+        if (Object.keys(data).includes('password')) {
             if (password.length < 8 || password.length > 15) {
                 return res.status(400).send({
                     Status: 'Failed',
@@ -192,9 +266,29 @@ const updateUser = async (req, res) => {
 
             //Hashing Password
             req.body.password = await bcrypt.hash(password, saltRounds);
+            updatedData.password = password;
         }
 
-        await userModel.findByIdAndUpdate({ _id: req.userId }, req.body, { new: true });
+        if (Object.keys(data).includes('phone')) {
+            if (!isValidNumber(phone)) {
+                return res.status(400).send({ Status: 'Failed', Message: "Phone number is not valid" });
+            }
+
+            const checkPhone = await userModel.findOne({ phone });
+            if (checkPhone) {
+                return res.status(400).send({ Status: 'Failed', Message: "This number already exists" });
+            }
+            updatedData.phone = phone;
+        }
+
+        if (Object.keys(data).includes('gender')) {
+            if (!(["Male", "Female", "Others"].includes(gender))) {
+                return res.status(400).send({ Status: false, message: "Please provide valid gender" })
+            }
+            updatedData.gender = gender;
+        }
+
+        await userModel.findByIdAndUpdate({ _id: req.params.userId }, updatedData, { new: true });
         return res.status(200).send({ Status: "Success", "Message": 'User Profile Updated' });
     }
     catch (error) {
@@ -208,34 +302,24 @@ const updateUser = async (req, res) => {
 
 const deleteUser = async (req, res) => {
     try {
-        const userId = req.params.userId;
+        let userId = req.params.userId;
 
-        //USER-ID Validation
-        if (!mongoose.isValidObjectId(userId)) {
-            return res.status(400).send({ Status: "Failed", Message: "UserId is not a valid Id" });
-        }
+        if (!mongoose.isValidObjectId(userId))
+            return res.status(400).send({ status: false, message: "userId is not valid" });
 
-        const userData = await userModel.findOne({ _id: userId });
-        if (!userData) {
-            return res.status(404).send({ Status: "Failed", Message: "User Id is not correct" });
-        }
+        let deleteUser = await userModel.findOneAndUpdate({ _id: userId, isDeleted: false },
+            {
+                $set: { isDeleted: true }
+            }, { new: true });
 
-        //Authorization Check
-        if (req.userId !== userData._id.toString()) {
-            return res.status(403).send({
-                Status: "Failed",
-                Message: "You're not allowed to delete this account",
-            });
-        }
+        if (!deleteUser) return res.status(404).send({ status: false, message: `No user with id ${userId} found` });
 
-        //Permanently deleting User account. Ideally we use a flag isDeleted to just hide the account.
-        await userModel.findByIdAndRemove({ _id: userId });
         return res.status(204).send({ Status: "Success" });
-    }
-    catch (error) {
+    } catch (error) {
         res.status(500).send({ Status: "Failed", Message: error.message });
     }
-};
+}
 
+//------------------------------------------------------------------------------------//
 
-module.exports = { createUser, login, updateUser, deleteUser }
+module.exports = { createUser, login, getUserDetails, updateUser, deleteUser }

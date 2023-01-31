@@ -3,21 +3,48 @@ const mongoose = require("mongoose");
 const userSchema = new mongoose.Schema({
     name: {
         type: String,
-        required: [true, "Please enter your Name"],
+        required: true,
     },
+
+    role: {
+        type: Boolean,
+        default: false,
+    },          //specification of roles  for user and admin 
 
     email: {
         type: String,
-        required: [true, "Email id is a mandatory field"],
+        required: true,
         unique: true,
-        trim: true
+        trim: true,
     },
 
     password: {
         type: String,
-        required: [true, "Password length should be atleast 8 characters"],
+        required: true,
         minlength: 8,
     },
+
+    gender: {
+        type: String,
+        enum: ["Male", "Female", "Others"],
+        required: true,
+    },
+
+    phone: {
+        type: String,
+        required: true,
+        unique: true,
+    },
+
+    profileImage: {
+        type: String,
+        default: "https://img.freepik.com/free-icon/user_318-804790.jpg?w=2000",
+    },
+
+    isDeleted: {
+        type: Boolean,
+        default: false,
+    }
 },
     { timestamps: true, versionKey: false }
 );
