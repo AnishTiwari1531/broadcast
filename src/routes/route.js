@@ -1,12 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const { verifyTokenAndAuthorization, verifyTokenAndAdmin, } = require("../middleware/auth");
-const { createUser, login, getUserDetails, updateUser, deleteUser } = require("../controller/userController");
+const { createUser, login, getUserDetails, getAllUserName, updateUser, deleteUser } = require("../controller/userController");
 
 
 //User Controller
-router.post("/createuser", createUser);          
-router.post("/login", login);                    
+router.post("/createuser", createUser);
+router.post("/login", login);
 router.put("/updateUser/:userId", verifyTokenAndAuthorization, updateUser);
 router.delete("/deleteUser/:userId", verifyTokenAndAuthorization, deleteUser);
 
@@ -14,6 +14,8 @@ router.delete("/deleteUser/:userId", verifyTokenAndAuthorization, deleteUser);
 //Admin Controller
 router.get("/getUserDetails", verifyTokenAndAdmin, getUserDetails)
 
+//Get All User
+router.get('/getAllUserName', getAllUserName)
 
 //If user try to search home page [ without any specfic route]
 router.all("/", (req, res) => {

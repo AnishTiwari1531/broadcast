@@ -209,6 +209,24 @@ const getUserDetails = async (req, res) => {
     }
 }
 
+//----------------------------------GET - ALL - USERNAME--------------------------------//
+
+const getAllUserName = async (req, res) => {
+    try {
+
+        let data = await userModel.find().select({ name: 1  })
+
+        if (data.length !== 0) {
+            return res.status(200).send({ status: true, message: "Success", Data: data });
+        } else if (data.length === 0) {
+            return res.status(404).send({ status: false, message: "No Data found" });
+        }
+
+    } catch (error) {
+        return res.status(500).send({ status: false, message: err.message })
+    }
+}
+
 
 //----------------------------------USER-Profile Update --------------------------------//
 
@@ -322,4 +340,4 @@ const deleteUser = async (req, res) => {
 
 //------------------------------------------------------------------------------------//
 
-module.exports = { createUser, login, getUserDetails, updateUser, deleteUser }
+module.exports = { createUser, login, getUserDetails, getAllUserName, updateUser, deleteUser }
