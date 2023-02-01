@@ -21,7 +21,7 @@ router.get('/getAllUserName', getAllUserName)
 router.all("/", (req, res) => {
     return res.status(200).send({
         Status: "HELLO! NICE TO SEE YOU HERE. ",
-        Message: " TRY SPECIFIC ROUTES TO SIGN UP, SIGN IN, CREATE-READ-UPDATE-DELETE REVIEW OR FETCH ALL REVIEWS FOR A PARTICULAR MOVIE"
+        Message: " TRY SPECIFIC ROUTES TO SIGN UP, SIGN IN, CREATE-READ-UPDATE-DELETE OR FETCH ALL USER DETAILS"
     });
 })
 
