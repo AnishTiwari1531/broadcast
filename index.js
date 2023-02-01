@@ -17,6 +17,6 @@ mongoose.connect(process.env.MONGO_URL, { useUnifiedTopology: true, useNewUrlPar
 
 app.use("/", route);
 
-app.listen(process.env.PORT, function () {
+app.listen(process.env.PORT || 4000, function () {
     console.log("Express app running on Port 4000")
 })
