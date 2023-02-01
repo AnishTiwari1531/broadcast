@@ -11,7 +11,7 @@ app.use(multer().any());
 
 mongoose.set("strictQuery", false);
 
-mongoose.connect("mongodb+srv://Anish_Tiwari1531:SINGH1531@cluster0.40jpapr.mongodb.net/broaddcast", { useUnifiedTopology: true, useNewUrlParser: true, })
+mongoose.connect(process.env.MONGO_URL, { useUnifiedTopology: true, useNewUrlParser: true, })
     .then(() => console.log("Database Connected successfully..."))
     .catch((error) => console.log(error));
 
