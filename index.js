@@ -1,3 +1,4 @@
+require("dotenv").config()
 const express = require("express");
 const mongoose = require("mongoose");
 const multer = require("multer");
@@ -16,6 +17,6 @@ mongoose.connect("mongodb+srv://Anish_Tiwari1531:SINGH1531@cluster0.40jpapr.mong
 
 app.use("/", route);
 
-app.listen(4000, function () {
+app.listen(process.env.PORT, function () {
     console.log("Express app running on Port 4000")
 })
